@@ -1,5 +1,4 @@
-# cesiumHydrograph
-The author of this project is Nash Euto
-Made using Tethys Platform. This was made as a demo for the Cesium mapping API while I was working in ERDC-CHL-HSB (Engineer Research and Development Center - Coastal and Hydraulics Lab - Hydrologics Systems Branch)
+# TethysCesiumHydrograph
+Originally made by Nash Euto. Made some changes to it.
 
-To see the javascript code which was the majority of the work I did, look in tethysapp/cesiumproject/public/js for main.js
+Added the 'Jump to Hilak ID', 'Jump to Coordinates', and 'Apply URL map' buttons.
