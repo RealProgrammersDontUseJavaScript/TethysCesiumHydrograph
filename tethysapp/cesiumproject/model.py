@@ -42,13 +42,13 @@ def readDams():
     lake_type = []
 
     #Read the data into a DataFrame
-    shape = gpd.read_file(shpPath)
+    shape = gpd.read_file(shpPath, rows=11000)
 
     surfaceFile = open(jsonPath)
     surface_data = surfaceFile.read()
 
     #Read the csv into a global variable upon initialization to make everything go faster later
-    jGraph = pan.read_csv(csvPath)
+    jGraph = pan.read_csv(csvPath, nrows=11000)
 
     for i in range(len(shape)):
         #Use the column name as a key

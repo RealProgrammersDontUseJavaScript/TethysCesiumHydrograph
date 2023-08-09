@@ -1,0 +1,21 @@
+Hey Alex,
+
+
+
+Here’s those URLs
+
+
+
+https://server.arcgisonline.com/ArcGIS/rest/services/World_Terrain_Base/MapServer/tile/{z}/{y}/{x}
+
+https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/{z}/{y}/{x}
+
+https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryTopo/MapServer/tile/{z}/{y}/{x}
+
+https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}
+
+https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}
+
+https://stamen-tiles.a.ssl.fastly.net/toner/{z}/{x}/{y}.png
+
+https://stamen-tiles.a.ssl.fastly.net/watercolor/{z}/{x}/{y}.jpg

@@ -5,13 +5,32 @@
 
 <body>
   <div id='map'></div>
-  <div id='toolbar' name='toolbar'>
-    <select id='draw-options'>
+    
+  <div id='toolbar' name='toolbar' style="width: 40%;">
+    <select id='draw-options' style="float: left">
       <option value='1'>Draw Point</option>
       <option value='2'>Draw Line</option>
       <option value='3'>Draw Polygon</option>
       <option value='4'>Multi Select</option>
     </select>
+    <!-- <img style="width: 140px; height: 60px;" src="http://localhost:8000/static/cesiumproject/images/w3c_HTML2_Compliance.png"> -->
+    <form style="margin-left: 100%; width: 25%;" onsubmit="return addLayerFromURL();">
+      <input id="Layer_URL" type="text" placeholder="URL of map tiles">
+      <button type="submit" value="">Apply to map</button>
+    </form>
+    <br><br> <!-- Just looks nice double spaced. -->
+    <form onsubmit="return flyToCoordinates();">
+      <input id="XCoord" type="text" name="X" placeholder="X Coordinate">&emsp;<input id="YCoord" type="text" name="Y" placeholder="Y Coordinate">
+      <br>
+      <button type="submit" name="Coord" value="COORD">Jump to these coordinates</button>
+    </form>
+    <br><br>
+    <div style="background-color: white; border: 2px solid grey; max-width: 2in">Click <button type="button" id="addImgBtn" onclick="addImg()" style="font-weight: bold;"> here </button> to load in the image.</div>
+    <br>
+    <form onsubmit="return flyToID();">
+      <input id="pointID" name="pid" type="text" placeholder="Point Hylak ID">
+      <button type="submit" name="buttID" value="">Jump to this ID</button>
+    </form>
   </div>
   <div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
     <div class="modal-dialog modal-lg" role="document">
@@ -79,8 +98,9 @@
     //Make a variable for the data that is being passed to the javascript file from the controller's context that renders this specific page
     var myData = {{ jData|safe }};
 
-  </script>   
-  <script src="{% static 'cesiumproject/js/main.js' %}" type="text/javascript"></script>  
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js" type="text/javascript"></script>
+  <script src="{% static 'cesiumproject/js/main.js' %}" type="text/javascript"></script>
 {% endblock %}
 
 

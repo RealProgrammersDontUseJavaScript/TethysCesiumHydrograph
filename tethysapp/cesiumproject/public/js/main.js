@@ -294,12 +294,17 @@ $(function(){
       }
       //Join the bound into a string, delimited by commas (2%C in urls) and put it into the geoserver filters
       bboxString = bboxArray.join('%2C');
-
       boundRect = new Cesium.Rectangle(nw.longitude, sw.latitude, se.longitude, nw.latitude);
+
+      /* ----- Code below refactored by Alex Burrell, in process of adding logarithmic scaling to lake heights -----
+         -----         Mostly replaced Object internals with official APIs for getting values                  -----
+         -----                Example: replace '._entityCollection' with '.entities'                           ----- */
+
       //If there is no intersection with the bounding box, use the procecss function (which does not replace everything) to get the polygons
       if(Cesium.Rectangle.intersection(rect, boundRect) != null){
-        viewer.dataSources._dataSources[1].process('https://pavics.ouranos.ca/geoserver/public/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=public%3AHydroLAKES_poly&bbox=' + bboxString + '&outputFormat=application%2Fjson');
-        var loaded = viewer.dataSources._dataSources[1]._entityCollection._entities._array;
+        viewer.dataSources.get(1).process('https://pavics.ouranos.ca/geoserver/public/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=public%3AHydroLAKES_poly&bbox=' + bboxString + '&outputFormat=application%2Fjson');
+        // console.log('https://pavics.ouranos.ca/geoserver/public/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=public%3AHydroLAKES_poly&bbox=' + bboxString + '&outputFormat=application%2Fjson');
+        var loaded = viewer.dataSources.get(1).entities.values;
         //If the entities loaded in from the webserver have ids that match those in the CSV, change the height of the polygons to match the value in the CSV
         for(let i = 0; i < loaded.length; i++){
           var id = loaded[i]['id'].slice(loaded[i]['id'].indexOf('.') + 1); //Slice to obtain the integer from the ID
@@ -310,8 +315,8 @@ $(function(){
       } else {
         //Same as above except load wipes all of the existing entities 
         rect = boundRect
-        viewer.dataSources._dataSources[1].load('https://pavics.ouranos.ca/geoserver/public/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=public%3AHydroLAKES_poly&bbox=' + bboxString + '&outputFormat=application%2Fjson');
-        var loaded = viewer.dataSources._dataSources[1]._entityCollection._entities._array;
+        viewer.dataSources.get(1).load('https://pavics.ouranos.ca/geoserver/public/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=public%3AHydroLAKES_poly&bbox=' + bboxString + '&outputFormat=application%2Fjson');
+        var loaded = viewer.dataSources.get(1).entities.values;
         for(let i = 0; i < loaded.length; i++){
           var id = loaded[i]['id'].slice(loaded[i]['id'].indexOf('.') + 1);
           if(surfaceData.hasOwnProperty(id)){
@@ -707,7 +712,251 @@ $(function(){
         viewer.screenSpaceEventHandler.removeInputAction(Cesium.ScreenSpaceEventType.MIDDLE_CLICK);
     }
   })
+
+  globView = viewer; // Line added by Alex, done so I can access the viewer object from global scope
 });
   
 
+// This section was done by Alex Burrell, all above by Nash except for line globView
+function flyToCoordinates() {
+
+  let XCoordNum = +$('#XCoord')[0].value;
+  let YCoordNum = +$('#YCoord')[0].value;
   
+  if(isNaN(XCoordNum) || isNaN(YCoordNum)) {
+    alert("Please enter only digits, no letters.");
+    return false;
+  }
+  else if(!XCoordNum || !YCoordNum) { // Easy way to check if either are zero, which indicates they left a field blank
+    alert("Please don't leave a field blank");
+    return false;
+  }
+  globView.camera.flyTo({
+    destination: new Cesium.Cartesian3.fromDegrees(XCoordNum, YCoordNum, 40000),
+  })
+
+  return false;
+}
+
+function flyToID() {
+  let pointID = Number($('#pointID')[0].value);
+  if(isNaN(pointID)) {
+    alert("Please enter only digits, no letters.");
+    return false;
+  }
+
+  // Given the point ID above, go find the point that corresponds to it.
+  // Working middle of this had to leave, FIX IT!
+  if(!myData.id.includes(pointID)) {
+    alert("Point with ID " + String(pointID) + " not found.");
+    return false;
+  }
+
+  // This whole section all the way to return false is horrible & inefficient, must refactor later
+  let indexOfPoint = myData.id.indexOf(pointID);
+
+  let daDataSource = globView.dataSources.getByName("Lakes")[0];
+
+  let XCoordNum = Number(myData.long[indexOfPoint]);
+  let YCoordNum = Number(myData.lat[indexOfPoint]);
+
+  // Snag the entity those coordinates correspond to so we can set it to the selected entity
+  let toBeSelectedEnt = daDataSource.entities.values[indexOfPoint];
+
+  globView.selectedEntity = toBeSelectedEnt;
+  globView.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(XCoordNum, YCoordNum, 3300000) });
+
+  return false;
+}
+
+function addImg() {
+  try{
+  addHydroImg('http://localhost:8000/static/cesiumproject/images/Prado2010_Sep262022_wHS_Jan17_BF5.2_STREAM_LOSS.png',
+  {"northing": 3805388.195347, "southing": 3724888.195347, "easting": 515053.934429, "westing": 417303.934429,
+  "run_path": "Prado/Jan17_2010-Jan31_2010/Prado2010_Sep262022_wHS_Jan17_BF5.2_STREAM_LOSS", "epsg": 32611});
+  } catch(e) { console.log(e.message); }
+  /* 
+
+  let myLisp = Cesium.Ellipsoid.MOON;
+  let leftUTMWall = -120;
+  let rightUTMWall = -114;
+  let bottomUTMWall = 0;
+  let topUTMLWall = 84;
+
+  let UTMZone11 = new Cesium.PolygonGraphics({
+    show: true,
+    // hierarchy: [new Cesium.Cartesian3(0,0,10), new Cesium.Cartesian3(0, 5, 10), new Cesium.Cartesian3(20, 0, 10)],
+    hierarchy: [Cesium.Cartesian3.fromDegrees(leftUTMWall,bottomUTMWall,10), Cesium.Cartesian3.fromDegrees(rightUTMWall, bottomUTMWall, 10),
+       Cesium.Cartesian3.fromDegrees(rightUTMWall, topUTMLWall, 10), Cesium.Cartesian3.fromDegrees(leftUTMWall, topUTMLWall, 10)],
+    // distanceDisplayCondition: new Cesium.DistanceDisplayCondition(),
+    extrudedHeight: 4000.0,
+    closeTop: true,
+    closeBottom: false,
+
+  });
+
+  globView.entities.add({
+    polygon: UTMZone11,
+    show: true,
+    extrudedHeight: 100,
+    closeTop: true,
+  });
+
+
+  let leftX = -117.89193951562746;
+  let rightX = -116.83623488078284;
+  let bottomY = 33.66065762214231;
+  let topY = 34.38978594038116;
+  
+  leftX = -120;
+  rightX = -114;
+  bottomY = 0;
+  topY = 84;
+  
+  let imgBoundBox = new Cesium.PolygonGraphics({
+    show: true,
+    hierarchy: [Cesium.Cartesian3.fromDegrees(leftX, bottomY, 20), Cesium.Cartesian3.fromDegrees(rightX, bottomY, 20),
+      Cesium.Cartesian3.fromDegrees(rightX, topY, 20), Cesium.Cartesian3.fromDegrees(leftX, topY, 20)],
+    material:  new Cesium.ImageMaterialProperty({ image: 'http://localhost:8000/static/cesiumproject/images/Prado2010_Sep262022_wHS_Jan17_BF5.2_STREAM_LOSS.png', transparent: true}),
+    extrudedHeight: 200,
+    closeTop: true,
+    closeBottom: false,
+  });
+
+  globView.entities.add({
+    // id: "123456789",
+    name: "Snoodle",
+    description: "Haha, this is in California!",
+    polygon: imgBoundBox,
+    properties: new Cesium.PropertyBag({ pretentiousness: 745 }),
+  }); */
+  /*
+  const greenPolygon = globView.entities.add({
+    name: "Green extruded polygon",
+    polygon: {
+      hierarchy: Cesium.Cartesian3.fromDegreesArray([
+        -108.0,
+        42.0,
+        -100.0,
+        42.0,
+        -104.0,
+        40.0,
+      ]),
+      extrudedHeight: 500000.0,
+      material: Cesium.Color.GREEN,
+      closeTop: false,
+      closeBottom: false,
+    },
+  }); */
+  // let WMP = new Cesium.WebMercatorProjection(Cesium.Ellipsoid.WGS84);
+
+}
+
+// Section also done by Alex Burrell, started week of July 31
+
+function addHydroImg(imgURL, JSONCoord) {
+  if(typeof(imgURL) != 'string') {
+    throw new TypeError('imgURL must be a string!');
+  }
+  
+  let epsgType = JSONCoord.epsg;
+  const epsgStr = String(epsgType);
+
+  // Check to see if the numbers of digits is equal to five, the first 2 are 32, and the last two are in the range 0 <= X <= 60
+  // If not, throw an error
+  if(epsgStr.length != 5 || epsgStr.slice(0,2) != "32" || Number(epsgStr.slice(-2)) > 60) {
+    console.error('Length: ' + epsgStr.length + ', 1st 2 digits: ' + epsgStr.slice(0,2) + ', last 2 digits: ' + epsgStr.slice(-2));
+    throw new Error('EPSG coordinates are not of type UTM');
+  }
+
+  // Kill 2 birds w/ 1 stone: Determine if we're doing UTM north or south, and also do error checking
+  let nOrS = null; // north Or South
+  if(epsgStr[2] == '6') { nOrS = ''; } 
+  else if(epsgStr[2] == '7') { nOrS = ' +south'; }
+  else { throw new Error('WGS Ver. must be WGS-84'); }
+
+  // Proj4 returns results as an [x, y] array, also parameter passing is weird; attributes/flags are passed as string fields '+attribute=value', not object fields
+  let northE = proj4('+proj=utm +zone=' + epsgStr.slice(-2) + nOrS, 'EPSG:4326', [JSONCoord.easting, JSONCoord.northing]);
+  let southW = proj4('+proj=utm +zone=' + epsgStr.slice(-2) + nOrS, 'EPSG:4326', [JSONCoord.westing, JSONCoord.southing]);
+
+  // Locations in array: [west, south, east, north]
+  let arr = southW.concat(northE);
+
+  // Corners: WS, WN, EN, ES
+  let plygnHier = [degreeToCar3(arr[0], arr[1]), degreeToCar3(arr[0], arr[3]), degreeToCar3(arr[2], arr[3]), degreeToCar3(arr[2], arr[1])];
+
+  let plygnImgBase = new Cesium.PolygonGraphics({
+    show: true,
+    hierarchy: plygnHier,
+    material: new Cesium.ImageMaterialProperty({ image: imgURL, transparent: true}),
+    extrudedHeight: 100,
+    closeTop: true,
+    closeBottom: false,
+  });
+
+  globView.entities.add({
+    description: '',
+    polygon: plygnImgBase,
+  });
+}
+
+function addLayerFromURL() {
+  let URL = $("#Layer_URL")[0].value;
+  /* layerToAdd = Cesium.ImageryLayer.fromProviderAsync(
+    new Cesium.UrlTemplateImageryProvider({
+      // Cesium.buildModuleUrl("Assets/Textures/NaturalEarthII"), 
+      //'https://tiles.stadiamaps.com/tiles/stamen_watercolor/',
+      // url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Terrain_Base/MapServer/tile/%7Bz%7D/%7By%7D/%7Bx%7D/',
+        // url: 'https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/%7Bz%7D/%7By%7D/%7Bx%7D',
+        // url: 'http://localhost:8000/static/cesiumproject/images/{x}/{y}/{z}.png',
+        url: URL,
+        credit: new Cesium.Credit('<a href="https://cesium.com/" target="_blank"><img src="/images/cesium_logo.png" title="Cesium"/></a>', true),
+        enablePickFeatures: false, 
+      }
+    ),
+    {
+      // fromProviderAsync options:
+      show: true
+    }
+  ); */
+
+  /* Old style (by old I mean that I tried 1st) way of doing it:
+   * globView.imageryLayers.add(layerToAdd);
+   * Unfortunately, this has the side effect of breaking the baseLayerPicker widget
+   * The 2nd way (below) doesn't do that
+   */
+
+  globView.baseLayerPicker.viewModel.imageryProviderViewModels.push(new Cesium.ProviderViewModel({
+    name: 'Custom Map No. ' + String(globView.baseLayerPicker.viewModel.imageryProviderViewModels.length - 12), // has to be minus 12, since length isn't incremented until the push method finishes executing, so it always reads as n-1, where n is the number of times push has been called
+    iconUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Globe-Africa-and-Europe%26Asiaparts.svg/512px-Globe-Africa-and-Europe%26Asiaparts.svg.png?20180429185850', // Image license: CC-BY-4.0
+    tooltip: 'Custom map added via the URL field',
+    creationFunction: function() {
+      return new Cesium.UrlTemplateImageryProvider({
+        url: URL,
+        credit: new Cesium.Credit('<span>Credit for this map goes to </span><a href="https://' + getURLhostname(URL) + '/" target="_blank"><span style="color: blue;">this link.</span></a>', true),
+        enablePickFeatures: false,
+      }
+    )}
+  }));
+
+  return false;
+}
+
+// Wrapper function around Cesium.Cartesian3.fromDegrees(), to save me typing
+function degreeToCar3(x, y) {
+  return Cesium.Cartesian3.fromDegrees(x, y, 20);
+}
+
+// Wrapper function around the URL constructor to avoid name collision with the URL variable above, also so we aren't cluttering up the Credit constructor
+function getURLhostname(urlParam) {
+  return new URL(urlParam).hostname.toString();
+}
+
+/* TODO:
+ * 1) Add in a generic *ADD URL* text field to add a layer to the Cesium map - ✓
+ * 2) Add in a text field to fly to a node with a specific ID - ✓
+ * 3) Add lake polygons with heights that grow logarithmically, aka normalize them (Gene will send link) - X
+ * 4) Dive into the time step functionality (aka, try it out) - X
+ * 5) Dive into 3D files that work w/ Cesium & Make a 3D file - X
+ * 6) Comment my code - X
+ */

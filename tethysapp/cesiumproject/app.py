@@ -8,7 +8,7 @@ class Cesiumproject(TethysAppBase):
 
     name = 'Cesiumproject'
     index = 'cesiumproject:home'
-    icon = 'cesiumproject/images/icon.gif'
+    icon = 'cesiumproject/images/cesium.svg'
     package = 'cesiumproject'
     root_url = 'cesiumproject'
     color = '#C4CC96'
