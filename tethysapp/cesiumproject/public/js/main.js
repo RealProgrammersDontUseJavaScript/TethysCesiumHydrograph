@@ -324,6 +324,25 @@ $(function(){
           }
         }
       }
+      /* Below, loop through the entire loaded array, normalizing the heights
+       * According to the formula 'final_height = log(height - base) + base' where height = the extrudedHeight,
+       * base = some random baseline height chosen by us not to normalize, and final_height = the extruded height of the polygon after running this code
+       * Code added by Alex
+       * TODO: Finish this! 8/11/23
+       */
+      if(loaded.length > 0) {
+      console.log("The length of loaded is " + String(loaded.length)); } //  + ', and the height of loaded[0] is ' + String(loaded[0].polygon.extrudedHeight.getValue())); }
+      
+      let baseHgt = 4000;
+      for(let i = 0; i < loaded.length; i++) {
+        try {
+        let polHgt = loaded[i].polygon.extrudedHeight.getValue();
+        console.log('We succeeded, men! The new polygon height is ' + String(polHgt));
+        if(polHgt > baseHgt) {
+          polHgt = Math.log2(polHgt - baseHgt) + baseHgt;
+        } }
+        catch(e) { console.error('We failed men: ' + String(e.message + '. On iteration ' + String(i)) + '; the lake\'s id is ' + loaded[i].properties.Hylak_id._value); }
+      }
     }
   });
 
@@ -548,7 +567,7 @@ $(function(){
     
     //Function for the callback in the squareClickHandler. Allows corners to be dynamic
     function getCornerLocations(){
-      return [squarePointOne._position._value, movingPoint._position._value, squarePointTwo._position._value,squareStart._position._value,];
+      return [squarePointOne.position.getValue(), movingPoint.position.getValue(), squarePointTwo.position.getValue(),squareStart.position.getValue(),];
     }
 
     //BUG: When you left click when the multi-select is active, the two supporting points lock in their longitude or latitude and mess up the square. Selection still functions properly though
@@ -577,9 +596,9 @@ $(function(){
           dynamicShape = drawShape(dynamicPositions);
         } else {
           //If it is the second click, get all of the points within the users rectangle
-          const entityArray = viewer.dataSources._dataSources[0]._entityCollection._entities._array;
+          const entityArray = viewer.dataSources.get(0).entities.values;
           for(let i = 0; i < entityArray.length; i++){ //Inefficient loop through every entity, but it works
-            var cartesian = Cesium.Cartesian3.fromElements(entityArray[i]._position._value['x'], entityArray[i]._position._value['y'], entityArray[i]._position._value['z']);
+            var cartesian = entityArray[i].position.getValue().clone();
             var cartographic = Cesium.Cartographic.fromCartesian(cartesian);
             //If the cartographic points of the entity fall within the rectangle, log them for now
             if(Cesium.Rectangle.contains(rectangle, cartographic)){
@@ -746,7 +765,7 @@ function flyToID() {
   }
 
   // Given the point ID above, go find the point that corresponds to it.
-  // Working middle of this had to leave, FIX IT!
+  // Working middle of this had to leave, REFACTOR!
   if(!myData.id.includes(pointID)) {
     alert("Point with ID " + String(pointID) + " not found.");
     return false;
@@ -754,7 +773,6 @@ function flyToID() {
 
   // This whole section all the way to return false is horrible & inefficient, must refactor later
   let indexOfPoint = myData.id.indexOf(pointID);
-
   let daDataSource = globView.dataSources.getByName("Lakes")[0];
 
   let XCoordNum = Number(myData.long[indexOfPoint]);
@@ -775,81 +793,6 @@ function addImg() {
   {"northing": 3805388.195347, "southing": 3724888.195347, "easting": 515053.934429, "westing": 417303.934429,
   "run_path": "Prado/Jan17_2010-Jan31_2010/Prado2010_Sep262022_wHS_Jan17_BF5.2_STREAM_LOSS", "epsg": 32611});
   } catch(e) { console.log(e.message); }
-  /* 
-
-  let myLisp = Cesium.Ellipsoid.MOON;
-  let leftUTMWall = -120;
-  let rightUTMWall = -114;
-  let bottomUTMWall = 0;
-  let topUTMLWall = 84;
-
-  let UTMZone11 = new Cesium.PolygonGraphics({
-    show: true,
-    // hierarchy: [new Cesium.Cartesian3(0,0,10), new Cesium.Cartesian3(0, 5, 10), new Cesium.Cartesian3(20, 0, 10)],
-    hierarchy: [Cesium.Cartesian3.fromDegrees(leftUTMWall,bottomUTMWall,10), Cesium.Cartesian3.fromDegrees(rightUTMWall, bottomUTMWall, 10),
-       Cesium.Cartesian3.fromDegrees(rightUTMWall, topUTMLWall, 10), Cesium.Cartesian3.fromDegrees(leftUTMWall, topUTMLWall, 10)],
-    // distanceDisplayCondition: new Cesium.DistanceDisplayCondition(),
-    extrudedHeight: 4000.0,
-    closeTop: true,
-    closeBottom: false,
-
-  });
-
-  globView.entities.add({
-    polygon: UTMZone11,
-    show: true,
-    extrudedHeight: 100,
-    closeTop: true,
-  });
-
-
-  let leftX = -117.89193951562746;
-  let rightX = -116.83623488078284;
-  let bottomY = 33.66065762214231;
-  let topY = 34.38978594038116;
-  
-  leftX = -120;
-  rightX = -114;
-  bottomY = 0;
-  topY = 84;
-  
-  let imgBoundBox = new Cesium.PolygonGraphics({
-    show: true,
-    hierarchy: [Cesium.Cartesian3.fromDegrees(leftX, bottomY, 20), Cesium.Cartesian3.fromDegrees(rightX, bottomY, 20),
-      Cesium.Cartesian3.fromDegrees(rightX, topY, 20), Cesium.Cartesian3.fromDegrees(leftX, topY, 20)],
-    material:  new Cesium.ImageMaterialProperty({ image: 'http://localhost:8000/static/cesiumproject/images/Prado2010_Sep262022_wHS_Jan17_BF5.2_STREAM_LOSS.png', transparent: true}),
-    extrudedHeight: 200,
-    closeTop: true,
-    closeBottom: false,
-  });
-
-  globView.entities.add({
-    // id: "123456789",
-    name: "Snoodle",
-    description: "Haha, this is in California!",
-    polygon: imgBoundBox,
-    properties: new Cesium.PropertyBag({ pretentiousness: 745 }),
-  }); */
-  /*
-  const greenPolygon = globView.entities.add({
-    name: "Green extruded polygon",
-    polygon: {
-      hierarchy: Cesium.Cartesian3.fromDegreesArray([
-        -108.0,
-        42.0,
-        -100.0,
-        42.0,
-        -104.0,
-        40.0,
-      ]),
-      extrudedHeight: 500000.0,
-      material: Cesium.Color.GREEN,
-      closeTop: false,
-      closeBottom: false,
-    },
-  }); */
-  // let WMP = new Cesium.WebMercatorProjection(Cesium.Ellipsoid.WGS84);
-
 }
 
 // Section also done by Alex Burrell, started week of July 31
@@ -902,23 +845,6 @@ function addHydroImg(imgURL, JSONCoord) {
 
 function addLayerFromURL() {
   let URL = $("#Layer_URL")[0].value;
-  /* layerToAdd = Cesium.ImageryLayer.fromProviderAsync(
-    new Cesium.UrlTemplateImageryProvider({
-      // Cesium.buildModuleUrl("Assets/Textures/NaturalEarthII"), 
-      //'https://tiles.stadiamaps.com/tiles/stamen_watercolor/',
-      // url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Terrain_Base/MapServer/tile/%7Bz%7D/%7By%7D/%7Bx%7D/',
-        // url: 'https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/%7Bz%7D/%7By%7D/%7Bx%7D',
-        // url: 'http://localhost:8000/static/cesiumproject/images/{x}/{y}/{z}.png',
-        url: URL,
-        credit: new Cesium.Credit('<a href="https://cesium.com/" target="_blank"><img src="/images/cesium_logo.png" title="Cesium"/></a>', true),
-        enablePickFeatures: false, 
-      }
-    ),
-    {
-      // fromProviderAsync options:
-      show: true
-    }
-  ); */
 
   /* Old style (by old I mean that I tried 1st) way of doing it:
    * globView.imageryLayers.add(layerToAdd);
@@ -950,6 +876,35 @@ function degreeToCar3(x, y) {
 // Wrapper function around the URL constructor to avoid name collision with the URL variable above, also so we aren't cluttering up the Credit constructor
 function getURLhostname(urlParam) {
   return new URL(urlParam).hostname.toString();
+}
+
+/* Cesium seems to natively support gltf models
+ * They mention here: (https://cesium.com/learn/3d-tiling/ion-tile-3d-models/) that Cesium also supports other formats
+ * Namely, Wavefront Objs, Filmbox, & Digital Asset Exchange 
+ */
+async function create3DModel() {
+  gltfMdl = Cesium.Model.fromGltfAsync({
+    url: 'http://localhost:8000/static/cesiumproject/models/CesiumHouse.glb', // gltf & glb are both Graphics Library Transmission Formats (as far as I can tell)
+    show: true,
+    scale: 1.0,
+    minimumPixelSize: 128,
+    maximumPixelSize: 2000,
+    asynchronous: true,
+    credit: '<div><a href="https://opengameart.org/content/rpg-item-collection-3">RPG Item Collection 3</a>, by Drummyfish on Open Game Art.</div>',
+    gltfCallback: (gltfObj) => { console.log('The gltf object was successfully loaded'); }
+  });
+  return await gltfMdl;
+}
+
+
+// https://web.archive.org/web/20150316212437/http://cesiumjs.org/2014/03/03/Cesium-3D-Models-Tutorial/
+function load3DModel() {
+  var frank = globView.entities.add({
+    name: 'Model of House',
+    position: Cesium.Cartesian3.fromDegrees(25, 25, 0),
+    model: create3DModel()
+  });
+  // globView.trackedEntity = frank;
 }
 
 /* TODO:
